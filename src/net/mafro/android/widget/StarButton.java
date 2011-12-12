@@ -52,6 +52,8 @@ public class StarButton extends CompoundButton implements OnCheckedChangeListene
 
 	private static final String TAG = "StarButton";
 
+	public boolean noRender = false;
+
 
 	public StarButton(Context context)
 	{
@@ -85,7 +87,9 @@ public class StarButton extends CompoundButton implements OnCheckedChangeListene
 	public void render()
 	{
 		//render the icon on this button
-		if(isChecked() == true) {
+		if(noRender == true) {
+			setButtonDrawable(android.R.id.empty);
+		}else if(isChecked() == true) {
 			setButtonDrawable(R.drawable.star_on);
 		}else{
 			setButtonDrawable(R.drawable.star_off);
