@@ -113,12 +113,15 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 		if(th != null) {
 			WakeOnLanActivity.isTablet = true;
 
+			// This is probably not needed as the set content is not an Intent
 			LocalActivityManager lam = new LocalActivityManager(this, false);
 			//lam.dispatchCreate(savedInstanceState);
 			th.setup(lam);
 
 			th.addTab(th.newTabSpec("tab_history").setIndicator(getString(R.string.tab_history), getResources().getDrawable(R.drawable.ical)).setContent(R.id.historyview));
 			th.addTab(th.newTabSpec("tab_wake").setIndicator(getString(R.string.tab_wake), getResources().getDrawable(R.drawable.wake)).setContent(R.id.wakeview));
+			
+			th.addTab(th.newTabSpec("tab_listen").setIndicator(getString(R.string.tab_listen), getResources().getDrawable(R.drawable.listen)).setContent(R.id.listenview));
 
 			th.setCurrentTab(0);
 
@@ -144,6 +147,19 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 		sendWake.setOnClickListener(this);
 		Button clearWake = (Button)findViewById(R.id.clear_wake);
 		clearWake.setOnClickListener(this);
+		
+		Button startListen = (Button)findViewById(R.id.start_listen);
+		startListen.setOnClickListener(new OnClickListener(){
+			@Override
+			public void onClick(View v) {
+				Log.d(TAG, "Start Listening. ");
+				
+				//TODO: Here we should start listening
+				// And if we receive a packet then broadcast a WOL
+				// When we start listening we porbably should configure what mac to broadcast too.
+				//  We can also add a listen button to the history
+			}
+		});
 
 		//register self as mac address field focus change listener
 		EditText vmac = (EditText)findViewById(R.id.mac);
