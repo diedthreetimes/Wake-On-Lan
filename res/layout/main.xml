@@ -77,6 +77,18 @@
 						android:layout_width="fill_parent"
 						android:layout_height="wrap_content" />
 					
+					<TextView 
+						android:layout_width="fill_parent"
+						android:layout_height="wrap_content"
+						android:text="@string/listen_port" />
+					<EditText 
+						android:id="@+id/listen_port"
+						android:layout_width="fill_parent"
+						android:layout_height="wrap_content" />
+					
+					
+					
+					
 					<LinearLayout
 						android:orientation="horizontal"
 						android:layout_width="fill_parent"
@@ -93,9 +105,17 @@
 							android:id="@+id/send_wake"
 							android:layout_width="wrap_content" 
 							android:layout_height="wrap_content" 
+							android:layout_gravity="left"
 							android:layout_weight="1"
-							android:layout_gravity="right"
 							android:text="@string/button_wake" />
+						
+						<Button
+							android:id="@+id/start_listen"
+							android:layout_width="wrap_content" 
+							android:layout_height="wrap_content" 
+							android:layout_gravity="right"
+							android:text="@string/button_listen" />
+						
 					</LinearLayout>
 
 				</LinearLayout>

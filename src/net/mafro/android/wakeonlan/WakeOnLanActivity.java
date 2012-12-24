@@ -28,6 +28,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package net.mafro.android.wakeonlan;
 
+import java.io.IOException;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+
 import android.app.Activity;
 import android.app.LocalActivityManager;
 
@@ -99,6 +105,7 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 
 	private static Toast notification;
 
+	private List<UDPServer> accept_threads;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -113,13 +120,14 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 		if(th != null) {
 			WakeOnLanActivity.isTablet = true;
 
+			// This is probably not needed as the set content is not an Intent
 			LocalActivityManager lam = new LocalActivityManager(this, false);
 			//lam.dispatchCreate(savedInstanceState);
 			th.setup(lam);
 
 			th.addTab(th.newTabSpec("tab_history").setIndicator(getString(R.string.tab_history), getResources().getDrawable(R.drawable.ical)).setContent(R.id.historyview));
 			th.addTab(th.newTabSpec("tab_wake").setIndicator(getString(R.string.tab_wake), getResources().getDrawable(R.drawable.wake)).setContent(R.id.wakeview));
-
+		
 			th.setCurrentTab(0);
 
 			//register self as tab changed listener
@@ -144,6 +152,9 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 		sendWake.setOnClickListener(this);
 		Button clearWake = (Button)findViewById(R.id.clear_wake);
 		clearWake.setOnClickListener(this);
+		
+		Button startListen = (Button)findViewById(R.id.start_listen);
+		startListen.setOnClickListener(this);
 
 		//register self as mac address field focus change listener
 		EditText vmac = (EditText)findViewById(R.id.mac);
@@ -175,6 +186,16 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 
 		//register main Activity as context menu handler
 		registerForContextMenu(lv);
+		
+		accept_threads = new ArrayList<UDPServer>();
+	}
+	
+	@Override
+	public void onDestroy(){
+		super.onDestroy();
+		for(UDPServer s : accept_threads ){
+			s.cancel();
+		}
 	}
 
 
@@ -234,22 +255,24 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 
 	public void onClick(View v)
 	{
-		if(v.getId() == R.id.send_wake) {
+		if(v.getId() == R.id.send_wake || v.getId() == R.id.start_listen) {
 			EditText vtitle = (EditText)findViewById(R.id.title);
 			EditText vmac = (EditText)findViewById(R.id.mac);
 			EditText vip = (EditText)findViewById(R.id.ip);
 			EditText vport = (EditText)findViewById(R.id.port);
 
 			String title = vtitle.getText().toString().trim();
-			String mac = vmac.getText().toString().trim();
+			final String mac = vmac.getText().toString().trim();
 
 			//default IP and port unless set on form
-			String ip = MagicPacket.BROADCAST;
+			final String ip;
 			if(!vip.getText().toString().trim().equals("")) {
 				ip = vip.getText().toString().trim();
+			}else{
+				ip = MagicPacket.BROADCAST;
 			}
 
-			int port = MagicPacket.PORT;
+			final int port;
 			if(!vport.getText().toString().trim().equals("")) {
 				try {
 					port = Integer.valueOf(vport.getText().toString().trim());
@@ -257,6 +280,8 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 					notifyUser("Bad port number", WakeOnLanActivity.this);
 					return;
 				}
+			}else{
+				 port = MagicPacket.PORT;
 			}
 
 			//update form with cleaned variables
@@ -268,12 +293,53 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 			//check for edit mode - no send of packet
 			if(_editModeID == 0) {
 				//send the magic packet
-				String formattedMac = sendPacket(title, mac, ip, port);
+				String formattedMac = null;
+				if(v.getId() == R.id.start_listen){
+					try {
+						//validate and clean our mac address
+						formattedMac = MagicPacket.cleanMac(mac);
+
+					}catch(IllegalArgumentException iae) {
+						notifyUser(iae.getMessage(), WakeOnLanActivity.this);
+						return;
+					}
+					
+					int listen_port;
+					try {
+						listen_port = Integer.valueOf(((EditText) findViewById(R.id.listen_port)).getText().toString().trim());
+					}catch(NumberFormatException nfe) {
+						notifyUser("Port must be a number", WakeOnLanActivity.this);
+						return;
+					}
+
+					try {
+						UDPServer server = new UDPServer(listen_port, new UDPServer.Callback(){
+							@Override
+							public void packetReceived() {
+								try {
+									Log.i(TAG, "Sent magic packet");
+									MagicPacket.send(mac, ip, port);
+								} catch (Exception e) {
+									Log.e(TAG, "Send Failed!: ", e);
+								}
+							}
+						});
+						
+						accept_threads.add(server);					
+						new Thread(server).start();
+					} catch (SocketException e) {
+						notifyUser("Listen port: " + listen_port + " already occupied." + e.getMessage(),WakeOnLanActivity.this);
+						return;
+					}
+				} else if(v.getId() == R.id.send_wake){
+					formattedMac = sendPacket(title, mac, ip, port);
+				}
 
 				//on successful send, add to history list
 				if(formattedMac != null) {
 					histHandler.addToHistory(title, formattedMac, ip, port);
 				}else{
+					Log.e(TAG, "Sending Failed.");
 					//return on sending failed
 					return;
 				}
@@ -305,7 +371,7 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 				th.setCurrentTab(0);
 			}
 
-		}else if(v.getId() == R.id.clear_wake) {
+		} else if(v.getId() == R.id.clear_wake) {
 			if(_editModeID == 0) {
 				//clear the form
 				EditText vtitle = (EditText)findViewById(R.id.title);
