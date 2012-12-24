@@ -120,7 +120,6 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 		if(th != null) {
 			WakeOnLanActivity.isTablet = true;
 
-			// This is probably not needed as the set content is not an Intent
 			LocalActivityManager lam = new LocalActivityManager(this, false);
 			//lam.dispatchCreate(savedInstanceState);
 			th.setup(lam);
@@ -152,6 +151,7 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 		sendWake.setOnClickListener(this);
 		Button clearWake = (Button)findViewById(R.id.clear_wake);
 		clearWake.setOnClickListener(this);
+
 		
 		Button startListen = (Button)findViewById(R.id.start_listen);
 		startListen.setOnClickListener(this);
