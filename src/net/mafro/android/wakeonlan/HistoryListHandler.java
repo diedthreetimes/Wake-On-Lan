@@ -64,7 +64,8 @@ public class HistoryListHandler implements OnItemClickListener
 		History.Items.PORT,
 		History.Items.LAST_USED_DATE,
 		History.Items.USED_COUNT,
-		History.Items.IS_STARRED
+		History.Items.IS_STARRED,
+		History.Items.LISTEN
 	};
 
 	private ListView view = null;
@@ -125,12 +126,13 @@ public class HistoryListHandler implements OnItemClickListener
 		int macColumn = cursor.getColumnIndex(History.Items.MAC);
 		int ipColumn = cursor.getColumnIndex(History.Items.IP);
 		int portColumn = cursor.getColumnIndex(History.Items.PORT);
+		int listenColumn = cursor.getColumnIndex(History.Items.LISTEN);
 
-		return new HistoryItem(cursor.getInt(idColumn), cursor.getString(titleColumn), cursor.getString(macColumn), cursor.getString(ipColumn), cursor.getInt(portColumn));
+		return new HistoryItem(cursor.getInt(idColumn), cursor.getString(titleColumn), cursor.getString(macColumn), cursor.getString(ipColumn), cursor.getInt(portColumn), cursor.getInt(listenColumn));
 	}
 
 
-	public void addToHistory(String title, String mac, String ip, int port)
+	public void addToHistory(String title, String mac, String ip, int port, int listenPort)
 	{
 		boolean exists = false;
 
@@ -150,22 +152,24 @@ public class HistoryListHandler implements OnItemClickListener
 
 		//create only if the item doesn't exist
 		if(exists == false) {
-			ContentValues values = new ContentValues(4);
+			ContentValues values = new ContentValues(5);
 			values.put(History.Items.TITLE, title);
 			values.put(History.Items.MAC, mac);
 			values.put(History.Items.IP, ip);
 			values.put(History.Items.PORT, port);
+			values.put(History.Items.LISTEN, listenPort);
 			wol.getContentResolver().insert(History.Items.CONTENT_URI, values);
 		}
 	}
 
-	public void updateHistory(int id, String title, String mac, String ip, int port)
+	public void updateHistory(int id, String title, String mac, String ip, int port, int listenPort)
 	{
-		ContentValues values = new ContentValues(4);
+		ContentValues values = new ContentValues(5);
 		values.put(History.Items.TITLE, title);
 		values.put(History.Items.MAC, mac);
 		values.put(History.Items.IP, ip);
 		values.put(History.Items.PORT, port);
+		values.put(History.Items.LISTEN, listenPort);
 
 		Uri itemUri = Uri.withAppendedPath(History.Items.CONTENT_URI, Integer.toString(id));
 		wol.getContentResolver().update(itemUri, values, null, null);

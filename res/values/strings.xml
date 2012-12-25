@@ -26,4 +26,5 @@
 	<string name="packet_sent">Magic Packet sent</string>
 	<string name="listen_port">Listen Port: </string>
 	<string name="button_listen">Listen</string>
+	<string name="menu_listen">Start relay service</string>
 </resources>

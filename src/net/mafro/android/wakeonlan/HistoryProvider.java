@@ -89,15 +89,19 @@ public class HistoryProvider extends ContentProvider {
 					+ History.Items.CREATED_DATE + " INTEGER,"
 					+ History.Items.LAST_USED_DATE + " INTEGER,"
 					+ History.Items.USED_COUNT + " INTEGER DEFAULT 1,"
-					+ History.Items.IS_STARRED + " INTEGER DEFAULT 0"
+					+ History.Items.IS_STARRED + " INTEGER DEFAULT 0,"
+					+ History.Items.LISTEN + " INTEGER"
 					+ ");");
 		}
 
 		@Override
 		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-			if((oldVersion == 1) && (newVersion == 2)) {
+			if((oldVersion == 1) && (newVersion >= 2)) {
 				db.execSQL("ALTER TABLE history ADD COLUMN " + History.Items.USED_COUNT + " INTEGER DEFAULT 1;");
 				db.execSQL("ALTER TABLE history ADD COLUMN " + History.Items.IS_STARRED + " INTEGER DEFAULT 0;");
+			}
+			if((oldVersion <= 2) && (newVersion >= 3)) {
+				db.execSQL("ALTER TABLE history ADD COLUMN " + History.Items.LISTEN + " INTEGER;");
 			}
 		}
 	}
@@ -180,6 +184,10 @@ public class HistoryProvider extends ContentProvider {
 			Resources r = Resources.getSystem();
 			values.put(History.Items.PORT, "");
 		}
+		if(values.containsKey(History.Items.LISTEN) == false) {
+			Resources r = Resources.getSystem();
+			values.put(History.Items.LISTEN, "");
+		}
 		if(values.containsKey(History.Items.CREATED_DATE) == false) {
 			values.put(History.Items.CREATED_DATE, now);
 		}
@@ -257,6 +265,7 @@ public class HistoryProvider extends ContentProvider {
 		sHistoryProjectionMap.put(History.Items.MAC, History.Items.MAC);
 		sHistoryProjectionMap.put(History.Items.IP, History.Items.IP);
 		sHistoryProjectionMap.put(History.Items.PORT, History.Items.PORT);
+		sHistoryProjectionMap.put(History.Items.LISTEN, History.Items.LISTEN);
 		sHistoryProjectionMap.put(History.Items.CREATED_DATE, History.Items.CREATED_DATE);
 		sHistoryProjectionMap.put(History.Items.LAST_USED_DATE, History.Items.LAST_USED_DATE);
 		sHistoryProjectionMap.put(History.Items.USED_COUNT, History.Items.USED_COUNT);

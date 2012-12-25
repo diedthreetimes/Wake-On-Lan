@@ -262,17 +262,17 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 			EditText vport = (EditText)findViewById(R.id.port);
 
 			String title = vtitle.getText().toString().trim();
-			final String mac = vmac.getText().toString().trim();
+			String mac = vmac.getText().toString().trim();
 
 			//default IP and port unless set on form
-			final String ip;
+			String ip;
 			if(!vip.getText().toString().trim().equals("")) {
 				ip = vip.getText().toString().trim();
 			}else{
 				ip = MagicPacket.BROADCAST;
 			}
 
-			final int port;
+			int port;
 			if(!vport.getText().toString().trim().equals("")) {
 				try {
 					port = Integer.valueOf(vport.getText().toString().trim());
@@ -290,6 +290,17 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 			vip.setText(ip);
 			vport.setText(Integer.toString(port));
 
+			int listen_port = 0;
+			try {
+				listen_port = Integer.valueOf(((EditText) findViewById(R.id.listen_port)).getText().toString().trim());
+			}catch(NumberFormatException nfe) {
+				//Unless we are listening this is fine.
+				// eat the exception
+			}
+			
+			
+			
+			
 			//check for edit mode - no send of packet
 			if(_editModeID == 0) {
 				//send the magic packet
@@ -304,40 +315,19 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 						return;
 					}
 					
-					int listen_port;
-					try {
-						listen_port = Integer.valueOf(((EditText) findViewById(R.id.listen_port)).getText().toString().trim());
-					}catch(NumberFormatException nfe) {
-						notifyUser("Port must be a number", WakeOnLanActivity.this);
+					if(listen_port == 0) {
+						notifyUser("Listen port must be a number > 0", WakeOnLanActivity.this);
 						return;
 					}
 
-					try {
-						UDPServer server = new UDPServer(listen_port, new UDPServer.Callback(){
-							@Override
-							public void packetReceived() {
-								try {
-									Log.i(TAG, "Sent magic packet");
-									MagicPacket.send(mac, ip, port);
-								} catch (Exception e) {
-									Log.e(TAG, "Send Failed!: ", e);
-								}
-							}
-						});
-						
-						accept_threads.add(server);					
-						new Thread(server).start();
-					} catch (SocketException e) {
-						notifyUser("Listen port: " + listen_port + " already occupied." + e.getMessage(),WakeOnLanActivity.this);
-						return;
-					}
+					startListen(mac, ip, port, listen_port);
 				} else if(v.getId() == R.id.send_wake){
 					formattedMac = sendPacket(title, mac, ip, port);
 				}
 
 				//on successful send, add to history list
 				if(formattedMac != null) {
-					histHandler.addToHistory(title, formattedMac, ip, port);
+					histHandler.addToHistory(title, formattedMac, ip, port, listen_port);
 				}else{
 					Log.e(TAG, "Sending Failed.");
 					//return on sending failed
@@ -357,7 +347,7 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 				}
 
 				//update existing history entry
-				histHandler.updateHistory(_editModeID, title, formattedMac, ip, port);
+				histHandler.updateHistory(_editModeID, title, formattedMac, ip, port, listen_port);
 
 				//reset now edit mode complete
 				_editModeID = 0;
@@ -423,6 +413,8 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 				sendWake.setText(R.string.button_wake);
 				Button clearWake = (Button)findViewById(R.id.clear_wake);
 				clearWake.setText(R.string.button_clear);
+				
+				//TODO: Change the listen text
 			}
 		}
 	}
@@ -448,6 +440,34 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 		}
 	}
 
+	public void startListen(HistoryItem item)
+	{
+		startListen(item.mac, item.ip, item.port, item.listenPort);
+	}
+	public void startListen(final String mac, final String ip, final int port, final int listen_port)
+	{
+		try {
+			UDPServer server = new UDPServer(listen_port, new UDPServer.Callback(){
+				@Override
+				public void packetReceived() {
+					try {
+						Log.i(TAG, "Sent magic packet");
+						MagicPacket.send(mac, ip, port);
+					} catch (Exception e) {
+						Log.e(TAG, "Send Failed!: ", e);
+					}
+				}
+			});
+			
+			accept_threads.add(server);					
+			new Thread(server).start();
+			
+			notifyUser("Listening on port: " + listen_port, WakeOnLanActivity.this);
+		} catch (SocketException e) {
+			notifyUser("Listen port: " + listen_port + " already occupied." + e.getMessage(),WakeOnLanActivity.this);
+			return;
+		}
+	}
 
 	public String sendPacket(HistoryItem item)
 	{
@@ -495,14 +515,17 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 
 		switch (mi.getItemId()) {
 		case R.id.menu_wake:
-			String mac = sendPacket(item);
+			//TODO: Why would we be need to send the packet twice
+			//String mac = sendPacket(item);
 
 			//update used count in DB
 			if(sendPacket(item) != null) {
 				histHandler.incrementHistory(item.id);
 			}
 			return true;
-
+		case R.id.menu_listen:
+			startListen(item);
+			return true;
 		case R.id.menu_edit:
 			//save the id of record being edited
 			_editModeID = item.id;
@@ -512,12 +535,18 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 			EditText vmac = (EditText)findViewById(R.id.mac);
 			EditText vip = (EditText)findViewById(R.id.ip);
 			EditText vport = (EditText)findViewById(R.id.port);
+			EditText vlisten = (EditText)findViewById(R.id.listen_port);
 
 			//display editing data
 			vtitle.setText(item.title);
 			vmac.setText(item.mac);
 			vip.setText(item.ip);
 			vport.setText(Integer.toString(item.port));
+			
+			if(item.listenPort != 0)
+				vlisten.setText(Integer.toString(item.listenPort));
+			else
+				vlisten.setText("");
 
 			//clear any previous errors
 			vmac.setError(null);
@@ -527,6 +556,8 @@ public class WakeOnLanActivity extends Activity implements OnClickListener, OnTa
 			saveEdit.setText(R.string.button_save);
 			Button cancelEdit = (Button)findViewById(R.id.clear_wake);
 			cancelEdit.setText(R.string.button_cancel);
+			
+			//TODO: Change listen text
 
 			if(WakeOnLanActivity.isTablet == true) {
 				th.setCurrentTab(1);

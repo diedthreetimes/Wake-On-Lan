@@ -54,6 +54,7 @@ public final class History {
 		public static final String MAC = "mac";
 		public static final String IP = "ip";
 		public static final String PORT = "port";
+		public static final String LISTEN = "listen_port";		
 		public static final String CREATED_DATE = "created";
 		public static final String LAST_USED_DATE = "last_used";
 		public static final String USED_COUNT = "used_count";
